@@ -1,0 +1,50 @@
+{
+    // Use Go modules
+    "go.useLanguageServer": true,
+    "go.toolsManagement.autoUpdate": true,
+    "go.gopath": "",
+  
+    // Enable gopls (Go language server)
+    "gopls": {
+      "usePlaceholders": true,       // Show parameter names as placeholders
+      "analyses": {
+        "unusedparams": true,        // Warn on unused function parameters
+        "shadow": true               // Warn on variable shadowing
+      },
+      "staticcheck": true            // Enable staticcheck diagnostics
+    },
+  
+    // Formatting
+    "go.formatTool": "goimports",   // Automatically add/remove imports
+    "editor.formatOnSave": true,
+  
+    // Linting
+    "go.lintTool": "staticcheck",
+    "go.lintOnSave": "package",
+  
+    // Code navigation & autocomplete
+    "go.autocompleteUnimportedPackages": true,
+    "go.gotoSymbol.includeImports": true,
+  
+    // Testing
+    "go.testOnSave": true,
+    "go.testFlags": ["-v"],
+  
+    // Debugging
+    "go.delveConfig": {
+      "dlvLoadConfig": {
+        "followPointers": true,
+        "maxVariableRecurse": 1,
+        "maxStringLen": 64,
+        "maxArrayValues": 64,
+        "maxStructFields": -1
+      }
+    },
+  
+    // Misc
+    "files.autoSave": "onFocusChange",
+    "editor.codeActionsOnSave": {
+      "source.organizeImports": true
+    }
+  }
+  
