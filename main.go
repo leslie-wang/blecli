@@ -122,7 +122,7 @@ func scan(ctx *cli.Context) error {
 	// Send "Hello, world"
 	fmt.Println("send hello world")
 	message := []byte("hello")
-	_, err = writeResps[0].Write([]byte(message))
+	_, err = writeResps[0].WriteWithoutResponse([]byte(message))
 	if err != nil {
 		log.Fatalf("Failed to write: %v", err)
 	}

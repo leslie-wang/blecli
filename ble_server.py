@@ -47,6 +47,8 @@ async def connection_handler():
                 while True:
                     try:
                         writer = await write_char.written()
+                        data1 = bytes(writer.data) if hasattr(writer, "data") else None
+                        print("Write received:", data1)
                     except Exception as e:
                         print("write_char.written() failed:", e)
                         break
@@ -63,7 +65,7 @@ async def connection_handler():
 
                         try:
                             print("Send notify:", conn.device)
-                            await notify_char.notify(conn, b"ACK: hi")
+                            notify_char.notify(conn, b"ACK: hi")
                             print("Notify sent successfully")
                         except Exception as e:
                             print("Error sending notification:", e)
