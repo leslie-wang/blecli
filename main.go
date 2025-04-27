@@ -1,12 +1,12 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 	"tinygo.org/x/bluetooth"
 )
@@ -80,7 +80,8 @@ func scan(ctx *cli.Context) error {
 	// ble_characteristic_uuid = bluetooth.UUID(0x2A6E)  # Temperature Characteristic
 
 	serviceUUID := baseUUID(0x181A)
-	characteristicUUID := baseUUID(0x2A6E)
+	writeUUID := baseUUID(0x2A6E).String()
+	notifyUUID := baseUUID(0x2A1C).String()
 
 	fmt.Println("Discovering Services PicoServer...")
 	services, err := device.DiscoverServices([]bluetooth.UUID{serviceUUID})
@@ -96,33 +97,41 @@ func scan(ctx *cli.Context) error {
 	// Discover characteristics
 	fmt.Println("Discovering characteristics PicoServer...")
 
-	responseCharUUID := baseUUID(0x2A1C)
-
-	notifyResps, err := services[0].DiscoverCharacteristics([]bluetooth.UUID{responseCharUUID})
+	chars, err := services[0].DiscoverCharacteristics(nil)
 	if err != nil {
-		panic("Could not find notify characteristic: " + err.Error())
+		return errors.Wrapf(err, "Could not find notify characteristic")
 	}
 
-	fmt.Printf("Discovered Notify Characteristics: %+v\n", notifyResps)
+	var notifyChar, writeChar *bluetooth.DeviceCharacteristic
+	for _, char := range chars {
+		switch char.UUID().String() {
+		case writeUUID:
+			writeChar = &char
+		case notifyUUID:
+			notifyChar = &char
+		}
+	}
+	if notifyChar == nil {
+		return errors.New("unable to discover notification characteristics")
+	} else if writeChar == nil {
+		return errors.New("unable to discover write characteristics")
+	}
+
+	fmt.Printf("Discovered Notify Characteristics: %+v\n", notifyChar)
 
 	// Enable notifications before sending the request
-	notifyResps[0].EnableNotifications(func(buf []byte) {
+	notifyChar.EnableNotifications(func(buf []byte) {
 		fmt.Println("Received response:", string(buf))
 	})
 
 	time.Sleep(1 * time.Second)
 
-	writeResps, err := services[0].DiscoverCharacteristics([]bluetooth.UUID{characteristicUUID})
-	if err != nil || len(writeResps) == 0 {
-		log.Fatalf("Characteristic not found: %v", err)
-	}
-
-	fmt.Printf("Discovered Write Characteristics: %+v\n", writeResps)
+	fmt.Printf("Discovered Write Characteristics: %+v\n", writeChar)
 
 	// Send "Hello, world"
 	fmt.Println("send hello world")
 	message := []byte("hello")
-	_, err = writeResps[0].WriteWithoutResponse([]byte(message))
+	_, err = writeChar.WriteWithoutResponse([]byte(message))
 	if err != nil {
 		log.Fatalf("Failed to write: %v", err)
 	}

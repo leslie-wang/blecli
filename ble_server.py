@@ -1,6 +1,7 @@
 import uasyncio as asyncio
 import aioble
 import bluetooth
+import time
 
 ble_apprearance = 0x0300
 ble_advertiseing_interval = 2000
@@ -67,6 +68,8 @@ async def connection_handler():
                             print("Send notify:", conn.device)
                             notify_char.notify(conn, b"ACK: hi")
                             print("Notify sent successfully")
+                            
+                            time.sleep(3)
                         except Exception as e:
                             print("Error sending notification:", e)
                             #break

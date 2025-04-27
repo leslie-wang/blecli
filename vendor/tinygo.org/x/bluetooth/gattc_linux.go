@@ -235,7 +235,7 @@ func (c DeviceCharacteristic) WriteWithoutResponse(p []byte) (n int, err error) 
 // changes.
 //
 // Users may call EnableNotifications with a nil callback to disable notifications.
-func (c DeviceCharacteristic) EnableNotifications(callback func(buf []byte)) error {
+func (c *DeviceCharacteristic) EnableNotifications(callback func(buf []byte)) error {
 	switch callback {
 	default:
 		if c.property != nil {
@@ -280,6 +280,7 @@ func (c DeviceCharacteristic) EnableNotifications(callback func(buf []byte)) err
 
 		err := c.adapter.bus.RemoveMatchSignal(c.propertiesChangedMatchOption)
 		c.adapter.bus.RemoveSignal(c.property)
+		close(c.property)
 		c.property = nil
 		return err
 	}

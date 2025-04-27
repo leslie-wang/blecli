@@ -56,6 +56,18 @@ func (a *Advertisement) Configure(options AdvertisementOptions) error {
 		return errAdvertisementPacketTooBig
 	}
 
+	var typ uint8
+	switch options.AdvertisementType {
+	case AdvertisingTypeInd:
+		typ = C.BLE_GAP_ADV_TYPE_CONNECTABLE_SCANNABLE_UNDIRECTED
+	case AdvertisingTypeDirectInd:
+		typ = C.BLE_GAP_ADV_TYPE_CONNECTABLE_NONSCANNABLE_DIRECTED
+	case AdvertisingTypeScanInd:
+		typ = C.BLE_GAP_ADV_TYPE_NONCONNECTABLE_SCANNABLE_UNDIRECTED
+	case AdvertisingTypeNonConnInd:
+		typ = C.BLE_GAP_ADV_TYPE_NONCONNECTABLE_NONSCANNABLE_UNDIRECTED
+	}
+
 	data := C.ble_gap_adv_data_t{}
 	data.adv_data = C.ble_data_t{
 		p_data: (*C.uint8_t)(unsafe.Pointer(&a.payload.data[0])),
@@ -63,7 +75,7 @@ func (a *Advertisement) Configure(options AdvertisementOptions) error {
 	}
 	params := C.ble_gap_adv_params_t{
 		properties: C.ble_gap_adv_properties_t{
-			_type: C.BLE_GAP_ADV_TYPE_CONNECTABLE_SCANNABLE_UNDIRECTED,
+			_type: typ,
 		},
 		interval: C.uint32_t(options.Interval),
 	}
@@ -83,4 +95,17 @@ func (a *Advertisement) Stop() error {
 	a.isAdvertising.Set(0)
 	errCode := C.sd_ble_gap_adv_stop(a.handle)
 	return makeError(errCode)
+}
+
+// SetRandomAddress sets the random address to be used for advertising.
+func (a *Adapter) SetRandomAddress(mac MAC) error {
+	var addr C.ble_gap_addr_t
+	addr.addr = makeSDAddress(mac)
+	addr.set_bitfield_addr_type(C.BLE_GAP_ADDR_TYPE_RANDOM_STATIC)
+
+	errCode := C.sd_ble_gap_addr_set(&addr)
+	if errCode != 0 {
+		return Error(errCode)
+	}
+	return nil
 }

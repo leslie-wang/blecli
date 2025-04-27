@@ -1,6 +1,7 @@
 package bluetooth
 
 import (
+	"errors"
 	"fmt"
 	"unsafe"
 
@@ -342,7 +343,12 @@ func (a *Adapter) Connect(address Address, params ConnectionParams) (Device, err
 		return Device{}, err
 	}
 
-	return Device{address, bleDevice, newSession}, nil
+	device := Device{address, bleDevice, newSession}
+	if a.connectHandler != nil {
+		a.connectHandler(device, true)
+	}
+
+	return device, nil
 }
 
 // Disconnect from the BLE device. This method is non-blocking and does not
@@ -358,6 +364,10 @@ func (d Device) Disconnect() error {
 		return err
 	}
 
+	if DefaultAdapter.connectHandler != nil {
+		DefaultAdapter.connectHandler(d, false)
+	}
+
 	return nil
 }
 
@@ -371,4 +381,9 @@ func (d Device) RequestConnectionParams(params ConnectionParams) error {
 	// TODO: implement this using
 	// BluetoothLEDevice.RequestPreferredConnectionParameters.
 	return nil
+}
+
+// SetRandomAddress sets the random address to be used for advertising.
+func (a *Adapter) SetRandomAddress(mac MAC) error {
+	return errors.ErrUnsupported
 }

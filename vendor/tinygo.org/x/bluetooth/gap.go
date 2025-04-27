@@ -9,6 +9,18 @@ var (
 	errScanning                  = errors.New("bluetooth: a scan is already in progress")
 	errNotScanning               = errors.New("bluetooth: there is no scan in progress")
 	errAdvertisementPacketTooBig = errors.New("bluetooth: advertisement packet overflows")
+	errNotYetImplmented          = errors.New("bluetooth: not implemented")
+)
+
+const (
+	// Public address
+	GAPAddressTypePublic = 0x00
+	// Random Static address
+	GAPAddressTypeRandomStatic = 0x01
+	// Private Resolvable address
+	GAPAddressTypeRandomPrivateResolvable = 0x02
+	// Private Non-Resolvable address
+	GAPAddressTypeRandomPrivateNonResolvable = 0x03
 )
 
 // MACAddress contains a Bluetooth address which is a MAC address.
@@ -39,9 +51,27 @@ func (mac *MACAddress) Set(val string) {
 	mac.MAC = m
 }
 
+type AdvertisingType int
+
+const (
+	// AdvertisingTypeInd - connectable undirected.
+	AdvertisingTypeInd AdvertisingType = iota
+
+	// AdvertisingTypeDirectInd - connectable directed.
+	AdvertisingTypeDirectInd
+
+	// AdvertisingTypeScanInd - scannable undirected.
+	AdvertisingTypeScanInd
+
+	// AdvertisingTypeNonConnInd - non-connectable undirected.
+	AdvertisingTypeNonConnInd
+)
+
 // AdvertisementOptions configures an advertisement instance. More options may
 // be added over time.
 type AdvertisementOptions struct {
+	AdvertisementType AdvertisingType
+
 	// The (complete) local name that will be advertised. Optional, omitted if
 	// this is a zero-length string.
 	LocalName string
@@ -294,7 +324,7 @@ func (buf *rawAdvertisementPayload) HasServiceUUID(uuid UUID) bool {
 // ManufacturerData returns the manufacturer data in the advertisement payload.
 func (buf *rawAdvertisementPayload) ManufacturerData() []ManufacturerDataElement {
 	var manufacturerData []ManufacturerDataElement
-	for index := 0; index < int(buf.len)+4; index += int(buf.data[index]) + 1 {
+	for index := 0; index < int(buf.len); index += int(buf.data[index]) + 1 {
 		fieldLength := int(buf.data[index+0])
 		if fieldLength < 3 {
 			continue
@@ -315,7 +345,7 @@ func (buf *rawAdvertisementPayload) ManufacturerData() []ManufacturerDataElement
 // ServiceData returns the service data in the advertisment payload
 func (buf *rawAdvertisementPayload) ServiceData() []ServiceDataElement {
 	var serviceData []ServiceDataElement
-	for index := 0; index < int(buf.len)+4; index += int(buf.data[index]) + 1 {
+	for index := 0; index < int(buf.len); index += int(buf.data[index]) + 1 {
 		fieldLength := int(buf.data[index+0])
 		if fieldLength < 3 { // field has only length and type and no data
 			continue
@@ -357,7 +387,10 @@ func (buf *rawAdvertisementPayload) reset() {
 // before the call) from the advertisement options. It returns true if it fits,
 // false otherwise.
 func (buf *rawAdvertisementPayload) addFromOptions(options AdvertisementOptions) (ok bool) {
-	buf.addFlags(0x06)
+	// do not add flags for non-connectable advertisements
+	if options.AdvertisementType != AdvertisingTypeNonConnInd {
+		buf.addFlags(0x06)
+	}
 	if options.LocalName != "" {
 		if !buf.addCompleteLocalName(options.LocalName) {
 			return false

@@ -50,11 +50,25 @@ func (a *hciAdapter) enable() error {
 }
 
 func (a *hciAdapter) Address() (MACAddress, error) {
+	var empty MAC
+	if a.hci.address.MAC != empty {
+		return a.hci.address, nil
+	}
+
 	if err := a.hci.readBdAddr(); err != nil {
 		return MACAddress{}, err
 	}
 
-	return MACAddress{MAC: makeAddress(a.hci.address)}, nil
+	return a.hci.address, nil
+}
+
+func (a *Adapter) SetRandomAddress(mac MAC) error {
+	if err := a.hci.sendCommandWithParams(ogfLECtrl<<ogfCommandPos|ocfLESetRandomAddress, mac[:]); err != nil {
+		return err
+	}
+	copy(a.hci.address.MAC[:], mac[:])
+	a.hci.address.SetRandom(true)
+	return nil
 }
 
 func newBLEStack(port hciTransport) (*hci, *att) {

@@ -2,13 +2,13 @@
 
 [![Go Bluetooth](./images/gobluetooth.png)](https://tinygo.org/bluetooth)
 
-[![PkgGoDev](https://pkg.go.dev/badge/pkg.go.dev/tinygo.org/x/bluetooth)](https://pkg.go.dev/tinygo.org/x/bluetooth) [![Linux](https://github.com/tinygo-org/bluetooth/actions/workflows/linux.yml/badge.svg?branch=dev)](https://github.com/tinygo-org/bluetooth/actions/workflows/linux.yml) [![macOS](https://github.com/tinygo-org/bluetooth/actions/workflows/macos.yml/badge.svg?branch=dev)](https://github.com/tinygo-org/bluetooth/actions/workflows/macos.yml)
+[![PkgGoDev](https://pkg.go.dev/badge/pkg.go.dev/tinygo.org/x/bluetooth)](https://pkg.go.dev/tinygo.org/x/bluetooth) [![Linux](https://github.com/tinygo-org/bluetooth/actions/workflows/linux.yml/badge.svg?branch=dev)](https://github.com/tinygo-org/bluetooth/actions/workflows/linux.yml) [![macOS](https://github.com/tinygo-org/bluetooth/actions/workflows/macos.yml/badge.svg?branch=dev)](https://github.com/tinygo-org/bluetooth/actions/workflows/macos.yml) [![Windows](https://github.com/tinygo-org/bluetooth/actions/workflows/windows.yml/badge.svg?branch=dev)](https://github.com/tinygo-org/bluetooth/actions/workflows/windows.yml)
 
 Go Bluetooth is a cross-platform package for using [Bluetooth Low Energy](https://en.wikipedia.org/wiki/Bluetooth_Low_Energy) hardware from the Go programming language. 
 
 It works on typical operating systems such as [Linux](#linux), [macOS](#macos), and [Windows](#windows). 
 
-It can also be used running "bare metal" on microcontrollers produced by [Nordic Semiconductor](https://www.nordicsemi.com/) or using the Bluetooth Host Controller Interface (HCI) by using [TinyGo](https://tinygo.org/).
+By using [TinyGo](https://tinygo.org/), it can also be used running "bare metal" on microcontrollers produced by [Nordic Semiconductor](https://www.nordicsemi.com/), or boards that have a Bluetooth co-processor that uses the [Bluetooth Host Controller Interface (HCI)](https://www.bluetooth.com/wp-content/uploads/Files/Specification/HTML/Core-54/out/en/host-controller-interface/host-controller-interface-functional-specification.html).
 
 The Go Bluetooth package can be used to create both Bluetooth Low Energy Centrals as well as to create Bluetooth Low Energy Peripherals.
 
@@ -99,10 +99,10 @@ func must(action string, err error) {
 | Connect to peripheral            | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
 | Write peripheral characteristics | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
 | Receive notifications            | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
-| Advertisement                    | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
-| Local services                   | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
-| Local characteristics            | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
-| Send notifications               | :heavy_check_mark: | :x:                | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
+| Advertisement                    | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
+| Local services                   | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
+| Local characteristics            | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
+| Send notifications               | :heavy_check_mark: | :x:                | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  |
 
 ## Linux
 
@@ -161,8 +161,6 @@ There is a known issue with iTerm2 and the Bluetooth package. If you are getting
 
 Go Bluetooth support for Windows uses the [WinRT Bluetooth](https://docs.microsoft.com/en-us/uwp/api/windows.devices.bluetooth.bluetoothadapter?view=winrt-19041) interfaces by way of the https://github.com/saltosystems/winrt-go package.
 
-The Windows support only can only act as a BLE Central at this time, with some additional development work needed for full functionality.
-
 ### Installation
 
 Only the Go compiler itself is needed to compile Go Bluetooth code targeting Windows.
@@ -180,7 +178,7 @@ After you have followed the installation, you should be able to compile/run the 
 
 ## Nordic Semiconductor
 
-Go Bluetooth has bare metal support for several chips from Nordic Semiconductor that include a built-in Bluetooth Low Energy radio. 
+Go Bluetooth has bare metal support for several chips from [Nordic Semiconductor](https://www.nordicsemi.com/) that include a built-in Bluetooth Low Energy radio.
 
 This support requires compiling your programs using [TinyGo](https://tinygo.org/).
 
@@ -203,7 +201,7 @@ Check your desired target board for any additional installation requirements.
 The line of "Bluefruit" boards created by Adafruit already have the SoftDevice firmware pre-loaded. This means you can use TinyGo and the Go Bluetooth package without any additional steps required. Supported Adafruit boards include:
 
 * [Adafruit Circuit Playground Bluefruit](https://www.adafruit.com/product/4333)
-* [Adafruit CLUE Alpha](https://www.adafruit.com/product/4500)
+* [Adafruit CLUE](https://www.adafruit.com/product/4500)
 * [Adafruit Feather nRF52840 Express](https://www.adafruit.com/product/4062)
 * [Adafruit ItsyBitsy nRF52840](https://www.adafruit.com/product/4481)
 
@@ -213,7 +211,19 @@ For example, this command can be used to compile and flash an Adafruit Circuit P
 
 	tinygo flash -target circuitplay-bluefruit ./examples/circuitplay
 
-There are other boards with TinyGo support that also use the same UF2 bootloader with pre-loaded SoftDevice. They include:
+### Seeed Studio XIAO nRF52840
+
+The Seeed Studio Xiao nRF52840 uses the [UF2 bootloader](https://github.com/microsoft/uf2) with pre-loaded SoftDevice firmware, so it is very easy to use with TinyGo.
+
+* [Seeed Studio XIAO nRF52840](https://wiki.seeedstudio.com/XIAO_BLE)
+
+You can flash your TinyGo program like this:
+
+    tinygo flash -target=xiao-ble ./examples/heartrate
+
+### Other boards with UF2 bootloader
+
+There are other boards with TinyGo support that use the same UF2 bootloader with pre-loaded SoftDevice. They include:
 
 * [Nice Keyboards nice!nano](https://nicekeyboards.com/products/nice-nano-v1-0)
 * [Makerdiary nRF52840 MDK USB Dongle](https://wiki.makerdiary.com/nrf52840-mdk-usb-dongle/)

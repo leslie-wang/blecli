@@ -12,8 +12,8 @@ import (
 	"github.com/godbus/dbus/v5/prop"
 )
 
-var errAdvertisementNotStarted = errors.New("bluetooth: stop advertisement that was not started")
-var errAdvertisementAlreadyStarted = errors.New("bluetooth: start advertisement that was already started")
+var errAdvertisementNotStarted = errors.New("bluetooth: advertisement is not started")
+var errAdvertisementAlreadyStarted = errors.New("bluetooth: advertisement is already started")
 
 // Unique ID per advertisement (to generate a unique object path).
 var advertisementID uint64
@@ -28,6 +28,7 @@ type Advertisement struct {
 	adapter    *Adapter
 	properties *prop.Properties
 	path       dbus.ObjectPath
+	started    bool
 }
 
 // DefaultAdvertisement returns the default advertisement instance but does not
@@ -45,8 +46,8 @@ func (a *Adapter) DefaultAdvertisement() *Advertisement {
 //
 // On Linux with BlueZ, it is not possible to set the advertisement interval.
 func (a *Advertisement) Configure(options AdvertisementOptions) error {
-	if a.properties != nil {
-		panic("todo: configure advertisement a second time")
+	if a.started {
+		return errAdvertisementAlreadyStarted
 	}
 
 	var serviceUUIDs []string
@@ -75,7 +76,7 @@ func (a *Advertisement) Configure(options AdvertisementOptions) error {
 			"ServiceUUIDs":     {Value: serviceUUIDs},
 			"ManufacturerData": {Value: manufacturerData},
 			"LocalName":        {Value: options.LocalName},
-			"ServiceData":      {Value: serviceData},
+			"ServiceData":      {Value: serviceData, Writable: true},
 			// The documentation states:
 			// > Timeout of the advertisement in seconds. This defines the
 			// > lifetime of the advertisement.
@@ -110,6 +111,7 @@ func (a *Advertisement) Start() error {
 	if err != nil {
 		return fmt.Errorf("bluetooth: could not start advertisement: %w", err)
 	}
+	a.started = true
 	return nil
 }
 
@@ -122,6 +124,7 @@ func (a *Advertisement) Stop() error {
 		}
 		return fmt.Errorf("bluetooth: could not stop advertisement: %w", err)
 	}
+	a.started = false
 	return nil
 }
 
@@ -345,6 +348,7 @@ func (a *Adapter) Connect(address Address, params ConnectionParams) (Device, err
 	// were connected between the two calls the signal wouldn't be picked up.
 	signal := make(chan *dbus.Signal)
 	a.bus.Signal(signal)
+	defer close(signal)
 	defer a.bus.RemoveSignal(signal)
 	propertiesChangedMatchOptions := []dbus.MatchOption{dbus.WithMatchInterface("org.freedesktop.DBus.Properties")}
 	a.bus.AddMatchSignal(propertiesChangedMatchOptions...)
@@ -387,12 +391,20 @@ func (a *Adapter) Connect(address Address, params ConnectionParams) (Device, err
 		<-connectChan
 	}
 
+	if a.connectHandler != nil {
+		a.connectHandler(device, true)
+	}
+
 	return device, nil
 }
 
 // Disconnect from the BLE device. This method is non-blocking and does not
 // wait until the connection is fully gone.
 func (d Device) Disconnect() error {
+	if d.adapter.connectHandler != nil {
+		d.adapter.connectHandler(d, false)
+	}
+
 	// we don't call our cancel function here, instead we wait for the
 	// property change in `watchForConnect` and cancel things then
 	return d.device.Call("org.bluez.Device1.Disconnect", 0).Err
@@ -406,5 +418,26 @@ func (d Device) Disconnect() error {
 // On Linux, this call doesn't do anything because BlueZ doesn't support
 // changing the connection latency.
 func (d Device) RequestConnectionParams(params ConnectionParams) error {
+	return nil
+}
+
+// SetRandomAddress sets the random address to be used for advertising.
+func (a *Adapter) SetRandomAddress(mac MAC) error {
+	addr, err := a.adapter.GetProperty("org.bluez.Adapter1.Address")
+	if err != nil {
+		if err, ok := err.(dbus.Error); ok && err.Name == "org.freedesktop.DBus.Error.UnknownObject" {
+			return fmt.Errorf("bluetooth: adapter %s does not exist", a.adapter.Path())
+		}
+		return fmt.Errorf("could not get adapter address: %w", err)
+	}
+	a.address = mac.String()
+	if err := addr.Store(&a.address); err != nil {
+		return fmt.Errorf("could not set adapter address: %w", err)
+	}
+
+	if err := a.adapter.SetProperty("org.bluez.Adapter1.AddressType", "random"); err != nil {
+		return fmt.Errorf("could not set adapter address type: %w", err)
+	}
+
 	return nil
 }

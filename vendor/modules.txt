@@ -9,6 +9,9 @@ github.com/go-ole/go-ole
 github.com/godbus/dbus/v5
 github.com/godbus/dbus/v5/introspect
 github.com/godbus/dbus/v5/prop
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.1.0
 ## explicit
 github.com/russross/blackfriday/v2
@@ -26,7 +29,7 @@ github.com/saltosystems/winrt-go/windows/storage/streams
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
-# github.com/soypat/cyw43439 v0.0.0-20240609122733-da9153086796
+# github.com/soypat/cyw43439 v0.0.0-20241116210509-ae1ce0e084c5
 ## explicit; go 1.20
 github.com/soypat/cyw43439
 github.com/soypat/cyw43439/whd
@@ -53,6 +56,6 @@ golang.org/x/exp/constraints
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
-# tinygo.org/x/bluetooth v0.10.0
+# tinygo.org/x/bluetooth v0.11.0
 ## explicit; go 1.20
 tinygo.org/x/bluetooth
