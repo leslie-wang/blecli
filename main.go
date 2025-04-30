@@ -80,8 +80,8 @@ func scan(ctx *cli.Context) error {
 	// ble_characteristic_uuid = bluetooth.UUID(0x2A6E)  # Temperature Characteristic
 
 	serviceUUID := baseUUID(0x181A)
-	writeUUID := baseUUID(0x2A6E).String()
-	notifyUUID := baseUUID(0x2A1C).String()
+	writeUUID := baseUUID(0x6E40).String()
+	notifyUUID := baseUUID(0x6E41).String()
 
 	fmt.Println("Discovering Services PicoServer...")
 	services, err := device.DiscoverServices([]bluetooth.UUID{serviceUUID})
@@ -119,9 +119,11 @@ func scan(ctx *cli.Context) error {
 
 	fmt.Printf("Discovered Notify Characteristics: %+v\n", notifyChar)
 
+	done := make(chan struct{})
 	// Enable notifications before sending the request
 	notifyChar.EnableNotifications(func(buf []byte) {
 		fmt.Println("Received response:", string(buf))
+		done <- struct{}{}
 	})
 
 	time.Sleep(1 * time.Second)
@@ -130,13 +132,33 @@ func scan(ctx *cli.Context) error {
 
 	// Send "Hello, world"
 	fmt.Println("send hello world")
-	message := []byte("hello")
-	_, err = writeChar.WriteWithoutResponse([]byte(message))
-	if err != nil {
-		log.Fatalf("Failed to write: %v", err)
+	for _, message := range []string{"hello", "world"} {
+		_, err = writeChar.WriteWithoutResponse([]byte(message))
+		if err != nil {
+			log.Fatalf("Failed to write: %v", err)
+		}
+		select {
+		case <-done:
+		case <-time.After(time.Second):
+			// resend
+			fmt.Printf("Message (%s) sent again.\n", message)
+			_, err = writeChar.WriteWithoutResponse([]byte(message))
+			if err != nil {
+				log.Fatalf("Failed to write: %v", err)
+			}
+			time.Sleep(3 * time.Second)
+
+			fmt.Printf("Message (%s) sent 3rd time.\n", message)
+			_, err = writeChar.WriteWithoutResponse([]byte(message))
+			if err != nil {
+				log.Fatalf("Failed to write: %v", err)
+			}
+		}
+		time.Sleep(3 * time.Second)
+		fmt.Printf("Message (%s) sent successfully.\n", message)
+
 	}
-	fmt.Printf("Message (%s) sent successfully.\n", message)
-	time.Sleep(time.Minute)
+	time.Sleep(10 * time.Second)
 	return nil
 }
 
