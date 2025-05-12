@@ -9,6 +9,7 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"os"
+	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -191,6 +192,53 @@ func resize(src image.Image) image.Image {
 	return dst
 }
 
+func saveDataFile(data []byte) error {
+	genFolder := "gen"
+	err := os.MkdirAll(genFolder, 0744)
+	if err != nil {
+		return err
+	}
+	cFilename := filepath.Join(genFolder, "ImageData.c")
+	f, err := os.Create(cFilename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write([]byte(
+		`#include "ImageData.h"
+// 7 Color Image Data 800*480 
+const unsigned char Image7color[192000] = {
+`))
+	if err != nil {
+		return err
+	}
+	for idx, d := range data {
+		if idx%16 == 0 {
+			_, err = fmt.Fprint(f, "\t")
+			if err != nil {
+				return err
+			}
+		}
+
+		_, err = fmt.Fprintf(f, "0x%x,", d)
+		if err != nil {
+			return err
+		}
+		if idx == 0 {
+			continue
+		} else if idx%16 == 15 {
+			_, err = fmt.Fprint(f, "\n")
+			if err != nil {
+				return err
+			}
+		}
+	}
+	_, err = f.Write([]byte(
+		`};`))
+	return err
+}
+
 func convertImage(c *cli.Context) error {
 	if len(c.Args()) != 1 {
 		return errors.New("Usage: convert input.jpg")
@@ -225,12 +273,15 @@ func convertImage(c *cli.Context) error {
 		return err
 	}
 
+	err = os.WriteFile(epaperFilename, epaperResult, 0644)
+	if err != nil {
+		return err
+	}
+
 	fmt.Printf("Dithering complete. Output saved to %s and %s\n",
 		outputFilename, epaperFilename)
 
-	os.WriteFile(epaperFilename, epaperResult, 0644)
-
-	return nil
+	return saveDataFile(epaperResult)
 }
 
 func convertRaw(c *cli.Context) error {
