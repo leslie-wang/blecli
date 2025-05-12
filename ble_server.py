@@ -44,9 +44,79 @@ async def handle_get_file(notify_char, conn, data):
     except OSError as e:
         print("Failed to read file:", e)
       
-async def handle_save_file(notify_char, conn, data):
+import struct
+import uasyncio as asyncio
+
+async def start_file_receiver(bt, write_char, connection):
+    buffer = b""
+    state = "header"
+    file = None
+    expected_length = 0
+    received_length = 0
+    file_path = ""
+
+    print("Waiting for file data...")
+
+    try:
+        while True:
+            try:
+                writer = await write_char.written()
+                value = write_char.read()
+            except asyncio.TimeoutError:
+                print("Timeout waiting for data")
+                break
+
+            buffer += value
+
+            while True:
+                if state == "header":
+                    if len(buffer) >= 20:
+                        try:
+                            md5_bin = buffer[:16].decode("ascii")
+                            md5_hex = ''.join('{:02x}'.format(b) for b in md5_bin)
+                            expected_length = struct.unpack(">I", buffer[16:20])[0]
+                        except Exception as e:
+                            print("Header parse error:", e)
+                            buffer = b""  # reset and wait for new header
+                            break
+
+                        file_path = md5_hex
+                        file = open(file_path, "wb")
+                        received_length = 0
+
+                        buffer = buffer[20:]
+                        state = "body"
+                        print(f"Receiving {file_path}, length {expected_length}")
+                    else:
+                        break
+
+                if state == "body":
+                    remaining = expected_length - received_length
+                    if len(buffer) >= remaining:
+                        file.write(buffer[:remaining])
+                        file.close()
+                        print(f"File saved as {file_path}")
+
+                        buffer = buffer[remaining:]
+                        state = "header"
+                        file = None
+                    else:
+                        file.write(buffer)
+                        received_length += len(buffer)
+                        buffer = b""
+                        break
+
+    except Exception as e:
+        print("Unexpected error:", e)
+
+    finally:
+        if file and not file.closed:
+            print("Transfer interrupted. Closing file:", file_path)
+            file.close()
+    
+async def handle_save_file(write_char, notify_char, conn, data):
     if len(data) < 21:
-        print(f"[UPLOAD] err: too short")
+        print(f"[UPLOAD] err: too short, only {len(data)} byte")
         notify_char.notify(conn, b"ERR:Too short")
         return
 
@@ -99,7 +169,7 @@ async def handle_delete_file(notify_char, conn, data):
     except Exception as e:
         print("delete file: ", e)
             
-async def handle_data(notify_char, conn, data):
+async def handle_data(write_char, notify_char, conn, data):
     method = data[0]
     print("received method: ", method)
 
@@ -109,7 +179,7 @@ async def handle_data(notify_char, conn, data):
 
     # Method 1: File upload
     elif method == 1:
-        await handle_save_file(notify_char, conn, data[1:])
+        await handle_save_file(write_char, notify_char, conn, data[1:])
 
     # Method 2: File delete
     elif method == 2:
@@ -131,11 +201,12 @@ async def writer_loop(write_char, notify_char, conn):
     try:
         while conn.is_connected():
             print("Written by device: ", conn.device)
+            print("device MTU: ", conn.mtu)
             writer = await write_char.written()
             data = write_char.read()
             print("Got write:", data)
             if conn.is_connected():
-                await handle_data(notify_char, conn, data)
+                await handle_data(write_char, notify_char, conn, data)
             else:
                 print("Connection lost")
     except asyncio.CancelledError:

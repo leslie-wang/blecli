@@ -87,6 +87,21 @@ func main() {
 				Usage:  "Get one file",
 				Action: runGetFile,
 			},
+			{
+				Name: "convert",
+				Subcommands: cli.Commands{
+					{
+						Name:   "img",
+						Usage:  "Convert one image to album suitable format and raw data",
+						Action: convertImage,
+					},
+					{
+						Name:   "raw",
+						Usage:  "Convert one raw data to bmp",
+						Action: convertRaw,
+					},
+				},
+			},
 		},
 	}
 
